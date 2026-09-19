@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beyond the Four-Persona Hypothesis | Interactive Research Article</title>
+<meta name="description" content="Interactive HTML edition of the research paper on data-driven buyer segmentation for Parcl Co. Limited, with a live findings dashboard.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+/* =====================================================================
+   DESIGN TOKENS
+   ===================================================================== */
+:root {
+  --c-bg: #0b1424;
+  --c-bg-elevated: #101d33;
+  --c-panel: #14213d;
+  --c-panel-hover: #1b2c4c;
+  --c-border: rgba(212, 199, 173, 0.14);
+  --c-text: #eef1f6;
+  --c-text-muted: #9aa6b8;
+  --c-text-faint: #6c7890;
+
+  --c-brand: #b08d57;
+  --c-brand-soft: rgba(176, 141, 87, 0.16);
+  --c-accent: #2fb8a6;
+  --c-accent-soft: rgba(47, 184, 166, 0.14);
+  --c-flag: #c1666b;
+  --c-flag-soft: rgba(193, 102, 107, 0.14);
+  --c-positive: #6fbf8b;
+
+  --c-cluster-0: var(--c-brand);
+  --c-cluster-1: var(--c-flag);
+  --c-cluster-2: var(--c-accent);
+
+  --font-display: "Source Serif 4", Georgia, serif;
+  --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
+  --sidebar-w: 252px;
+  --topbar-h: 56px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px;
+  --measure: 72ch;
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 150ms;
+  --dur-med: 320ms;
+  --dur-slow: 600ms;
+}
+
+[data-theme="light"] {
+  --c-bg: #f6f4ee;
+  --c-bg-elevated: #ffffff;
+  --c-panel: #ffffff;
+  --c-panel-hover: #f1ede2;
+  --c-border: rgba(27, 29, 34, 0.1);
+  --c-text: #1b1d22;
+  --c-text-muted: #565b64;
+  --c-text-faint: #83879c;
+  --c-brand-soft: rgba(176, 141, 87, 0.12);
+  --c-accent-soft: rgba(47, 184, 166, 0.1);
+  --c-flag-soft: rgba(193, 102, 107, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-med: 0ms; --dur-slow: 0ms; }
+}
+
+/* =====================================================================
+   RESET + BASE
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  transition: background var(--dur-med) var(--ease), color var(--dur-med) var(--ease);
+}
+
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; line-height: 1.25; color: var(--c-text); margin: 0 0 0.5em 0; }
+p { margin: 0 0 1.1em 0; max-width: var(--measure); color: var(--c-text-muted); }
+a { color: var(--c-accent); }
+:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+
+.skip-link { position: absolute; left: -9999px; top: 0; background: var(--c-accent); color: #04211d; padding: 8px 16px; z-index: 1000; border-radius: 0 0 4px 0; font-weight: 600; }
+.skip-link:focus { left: 0; }
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 6px; }
+
+/* =====================================================================
+   PROGRESS BAR
+   ===================================================================== */
+#progress-bar {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+  background: linear-gradient(90deg, var(--c-brand), var(--c-accent));
+  z-index: 200; transition: width 80ms linear;
+}
+
+/* =====================================================================
+   TOPBAR
+   ===================================================================== */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  height: var(--topbar-h);
+  background: color-mix(in srgb, var(--c-bg) 85%, transparent);
+  background: var(--c-bg);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--c-border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--space-5);
+}
+.topbar-left { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.topbar-title { font-family: var(--font-mono); font-size: 0.78rem; color: var(--c-text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-actions { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+
+.icon-btn {
+  width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md); border: 1px solid var(--c-border); background: var(--c-panel);
+  cursor: pointer; color: var(--c-text-muted);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.icon-btn:hover { background: var(--c-panel-hover); color: var(--c-text); }
+.icon-btn svg { width: 17px; height: 17px; }
+.menu-toggle { display: none; }
+
+.theme-toggle { position: relative; width: 42px; height: 24px; border-radius: 999px; border: 1px solid var(--c-border); background: var(--c-bg-elevated); cursor: pointer; flex: none; }
+.theme-toggle-thumb { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--c-brand); transition: transform var(--dur-fast) var(--ease); }
+[data-theme="light"] .theme-toggle-thumb { transform: translateX(18px); }
+
+/* =====================================================================
+   LAYOUT
+   ===================================================================== */
+.shell { display: grid; grid-template-columns: var(--sidebar-w) 1fr; }
+
+.toc {
+  position: sticky; top: var(--topbar-h); align-self: start;
+  height: calc(100vh - var(--topbar-h));
+  overflow-y: auto;
+  border-right: 1px solid var(--c-border);
+  padding: var(--space-5) var(--space-4);
+}
+.toc-eyebrow { font-family: var(--font-mono); font-size: 0.68rem; color: var(--c-text-faint); letter-spacing: 0.04em; margin-bottom: var(--space-3); display: block; }
+.toc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.toc-link {
+  display: block; padding: 7px 10px; border-radius: var(--radius-sm);
+  font-size: 0.84rem; color: var(--c-text-muted); text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.toc-link:hover { background: var(--c-panel-hover); color: var(--c-text); }
+.toc-link.is-active { color: var(--c-brand); border-left-color: var(--c-brand); background: var(--c-brand-soft); font-weight: 500; }
+.toc-link.sub { padding-left: 22px; font-size: 0.78rem; }
+
+.toc-footer { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--c-border); font-family: var(--font-mono); font-size: 0.68rem; color: var(--c-text-faint); line-height: 1.9; }
+
+main { min-width: 0; }
+.wrap { max-width: 880px; margin: 0 auto; padding: var(--space-7) var(--space-6) var(--space-8); }
+
+/* =====================================================================
+   HERO / TITLE
+   ===================================================================== */
+.hero { padding-bottom: var(--space-6); border-bottom: 1px solid var(--c-border); margin-bottom: var(--space-6); }
+.hero-eyebrow { font-family: var(--font-mono); font-size: 0.74rem; color: var(--c-brand); letter-spacing: 0.02em; margin-bottom: var(--space-3); display: block; }
+.hero h1 { font-size: clamp(1.7rem, 1.2rem + 1.8vw, 2.5rem); max-width: 20ch; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-4); font-size: 0.85rem; color: var(--c-text-faint); }
+.hero-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.hero-authors { margin-top: var(--space-4); font-size: 0.92rem; color: var(--c-text-muted); font-style: italic; }
+.hero-actions { display: flex; gap: var(--space-3); margin-top: var(--space-5); flex-wrap: wrap; }
+
+.keyword-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--space-4); }
+.keyword {
+  font-family: var(--font-mono); font-size: 0.72rem; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--c-border); color: var(--c-text-muted);
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--c-border); background: var(--c-panel); color: var(--c-text);
+  padding: 9px 16px; border-radius: var(--radius-md); font-weight: 500; font-size: 0.85rem;
+  cursor: pointer; transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.btn:hover { background: var(--c-panel-hover); }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--c-brand); border-color: var(--c-brand); color: #211605; }
+.btn-primary:hover { background: #c19d67; }
+.btn svg { width: 15px; height: 15px; }
+
+/* =====================================================================
+   ABSTRACT CARD
+   ===================================================================== */
+.abstract-card { background: var(--c-panel); border: 1px solid var(--c-border); border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-6); }
+.abstract-card h2 { font-size: 1.05rem; margin-bottom: var(--space-3); }
+.abstract-card p { max-width: none; margin-bottom: 0; }
+.abstract-toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); flex-wrap: wrap; gap: var(--space-2); }
+.mode-switch { display: inline-flex; gap: 2px; background: var(--c-bg-elevated); border: 1px solid var(--c-border); border-radius: var(--radius-md); padding: 3px; }
+.mode-btn { border: none; background: transparent; color: var(--c-text-muted); padding: 5px 12px; border-radius: calc(var(--radius-md) - 2px); font-size: 0.78rem; cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.mode-btn.is-active { background: var(--c-panel); color: var(--c-text); }
+
+/* =====================================================================
+   DASHBOARD (KEY FINDINGS)
+   ===================================================================== */
+.dashboard { background: var(--c-bg-elevated); border: 1px solid var(--c-border); border-radius: var(--radius-lg); padding: var(--space-5); margin: var(--space-6) 0 var(--space-7); }
+.dashboard-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); }
+.dashboard-head h2 { font-size: 1.15rem; margin-bottom: 2px; }
+.dashboard-head p { margin: 0; font-size: 0.85rem; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-3); margin-bottom: var(--space-5); }
+.kpi { background: var(--c-panel); border: 1px solid var(--c-border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-3); }
+.kpi-label { font-size: 0.72rem; color: var(--c-text-faint); display: block; margin-bottom: 4px; }
+.kpi-value { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.kpi-value .unit { font-size: 0.75rem; color: var(--c-text-faint); margin-left: 2px; }
+
+.chart-panel { background: var(--c-panel); border: 1px solid var(--c-border); border-radius: var(--radius-md); padding: var(--space-4); }
+.chart-tabs { display: inline-flex; gap: 2px; background: var(--c-bg-elevated); border: 1px solid var(--c-border); border-radius: var(--radius-md); padding: 3px; margin-bottom: var(--space-4); }
+.chart-tab { border: none; background: transparent; color: var(--c-text-muted); padding: 6px 13px; border-radius: calc(var(--radius-md) - 2px); font-size: 0.78rem; cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.chart-tab.is-active { background: var(--c-panel); color: var(--c-text); }
+.chart-wrap { position: relative; height: 300px; }
+.chart-wrap canvas { width: 100% !important; }
+.chart-caption { font-size: 0.82rem; color: var(--c-text-faint); margin: var(--space-3) 0 0; max-width: none; }
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-3); }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--c-text-muted); }
+.legend-swatch { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+
+/* =====================================================================
+   ARTICLE BODY
+   ===================================================================== */
+.section { scroll-margin-top: calc(var(--topbar-h) + 16px); margin-bottom: var(--space-7); }
+.section h2 { font-size: 1.5rem; padding-bottom: var(--space-2); border-bottom: 1px solid var(--c-border); margin-bottom: var(--space-4); }
+.section h3 { font-size: 1.12rem; margin-top: var(--space-5); color: var(--c-brand); }
+.section p { text-align: justify; hyphens: auto; }
+
+.term-btn {
+  border: none; background: none; padding: 0; margin: 0; cursor: pointer;
+  color: inherit; font: inherit; text-decoration: underline dotted var(--c-text-faint); text-underline-offset: 3px;
+}
+.term-btn:hover, .term-btn[aria-expanded="true"] { color: var(--c-accent); }
+
+#tooltip {
+  position: fixed; z-index: 300; max-width: 280px;
+  background: var(--c-bg-elevated); border: 1px solid var(--c-border); border-radius: var(--radius-md);
+  padding: var(--space-3); font-size: 0.82rem; color: var(--c-text); box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+  opacity: 0; transform: translateY(4px); pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+#tooltip.is-visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+#tooltip strong { color: var(--c-brand); display: block; margin-bottom: 4px; font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+details.note {
+  background: var(--c-panel); border: 1px solid var(--c-border); border-left: 3px solid var(--c-brand);
+  border-radius: var(--radius-md); margin: var(--space-4) 0; overflow: hidden;
+}
+details.note summary {
+  cursor: pointer; padding: var(--space-3) var(--space-4); font-weight: 500; font-size: 0.92rem;
+  list-style: none; display: flex; align-items: center; justify-content: space-between; color: var(--c-text);
+}
+details.note summary::-webkit-details-marker { display: none; }
+details.note summary::after {
+  content: ""; width: 9px; height: 9px; border-right: 1.5px solid var(--c-text-faint); border-bottom: 1.5px solid var(--c-text-faint);
+  transform: rotate(45deg); transition: transform var(--dur-fast) var(--ease); flex: none; margin-left: var(--space-3);
+}
+details.note[open] summary::after { transform: rotate(-135deg); }
+details.note .note-body { padding: 0 var(--space-4) var(--space-4); }
+details.note .note-body p:last-child { margin-bottom: 0; }
+
+.callout { background: var(--c-flag-soft); border: 1px solid color-mix(in srgb, var(--c-flag) 35%, transparent); border: 1px solid var(--c-flag); border-radius: var(--radius-md); padding: var(--space-4); margin: var(--space-4) 0; }
+.callout p { margin: 0; max-width: none; color: var(--c-text); font-size: 0.92rem; }
+.callout strong { color: var(--c-flag); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; margin: var(--space-4) 0; }
+table.data-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+table.data-table caption { caption-side: top; text-align: left; font-style: italic; color: var(--c-text-muted); margin-bottom: var(--space-2); font-size: 0.85rem; }
+table.data-table th, table.data-table td { border: 1px solid var(--c-border); padding: 8px 12px; text-align: center; }
+table.data-table th { background: var(--c-bg-elevated); font-weight: 600; }
+table.data-table td:first-child, table.data-table th:first-child { text-align: left; }
+.table-note { font-size: 0.78rem; color: var(--c-text-faint); font-style: italic; margin-top: var(--space-2); }
+
+figure.fig { margin: var(--space-5) 0; }
+figure.fig figcaption { font-size: 0.85rem; color: var(--c-text-faint); margin-top: var(--space-3); font-style: italic; }
+figure.fig figcaption strong { font-style: normal; color: var(--c-text-muted); }
+
+/* References */
+.ref-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.ref-item { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3); border-radius: var(--radius-md); transition: background var(--dur-fast) var(--ease); }
+.ref-item:hover { background: var(--c-panel); }
+.ref-text { font-size: 0.9rem; color: var(--c-text-muted); padding-left: 28px; text-indent: -28px; }
+.copy-btn {
+  flex: none; width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid var(--c-border);
+  background: var(--c-panel); color: var(--c-text-faint); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.copy-btn:hover { color: var(--c-accent); border-color: var(--c-accent); }
+.copy-btn svg { width: 14px; height: 14px; }
+.copy-btn.is-copied { color: var(--c-positive); border-color: var(--c-positive); }
+
+/* Back to top */
+#back-to-top {
+  position: fixed; right: var(--space-5); bottom: var(--space-5); z-index: 90;
+  width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--c-border);
+  background: var(--c-panel); color: var(--c-text); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: translateY(10px); pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+#back-to-top.is-visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+#back-to-top:hover { background: var(--c-panel-hover); }
+
+/* Sidebar scrim (mobile) */
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,0.5); opacity: 0; pointer-events: none; transition: opacity var(--dur-med) var(--ease); z-index: 95; }
+body.nav-open .scrim { opacity: 1; pointer-events: auto; }
+
+/* Page-load orchestration (single moment, not per-section) */
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.js-load .hero > * { animation: rise var(--dur-slow) var(--ease) both; }
+.js-load .hero-eyebrow { animation-delay: 40ms; }
+.js-load .hero h1 { animation-delay: 90ms; }
+.js-load .hero-authors { animation-delay: 140ms; }
+.js-load .hero-meta { animation-delay: 180ms; }
+.js-load .hero-actions { animation-delay: 220ms; }
+.js-load .keyword-list { animation-delay: 260ms; }
+@media (prefers-reduced-motion: reduce) { .js-load .hero > * { animation: none; } }
+
+.footer { border-top: 1px solid var(--c-border); padding-top: var(--space-5); font-size: 0.82rem; color: var(--c-text-faint); }
+
+/* =====================================================================
+   RESPONSIVE
+   ===================================================================== */
+@media (max-width: 1080px) {
+  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 960px) {
+  .shell { grid-template-columns: 1fr; }
+  .toc { position: fixed; top: 0; left: 0; height: 100vh; width: 82vw; max-width: 300px; background: var(--c-bg-elevated); z-index: 96; transform: translateX(-100%); transition: transform var(--dur-med) var(--ease); padding-top: calc(var(--topbar-h) + var(--space-4)); }
+  body.nav-open .toc { transform: translateX(0); }
+  .menu-toggle { display: inline-flex; }
+}
+@media (max-width: 720px) {
+  .wrap { padding: var(--space-5) var(--space-4) var(--space-7); }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .hero-meta { gap: var(--space-3); }
+  .section p { text-align: left; hyphens: none; }
+}
+@media print {
+  :root {
+    --c-bg: #ffffff; --c-bg-elevated: #ffffff; --c-panel: #ffffff; --c-panel-hover: #ffffff;
+    --c-border: #ccc; --c-text: #000000; --c-text-muted: #222222; --c-text-faint: #555555;
+    --c-brand-soft: transparent; --c-accent-soft: transparent; --c-flag-soft: transparent;
+  }
+  .topbar, .toc, .scrim, #back-to-top, #progress-bar, .hero-actions, #tooltip, .abstract-toggle-row .mode-switch { display: none !important; }
+  .shell { display: block; }
+  main .wrap { max-width: none; padding: 0; }
+  body { background: #fff; color: #000; }
+  .section p, .abstract-card p, p { color: #111; text-align: left; }
+  .abstract-card, .dashboard, .chart-panel, .kpi, details.note, .callout, table.data-table th, table.data-table td { box-shadow: none; border-color: #ccc; }
+  a { color: #000; text-decoration: underline; }
+  details.note { break-inside: avoid; }
+  table.data-table { break-inside: avoid; }
+  figure.fig { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<div id="progress-bar"></div>
+<div class="scrim" data-scrim></div>
+<div id="tooltip" role="tooltip"></div>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="icon-btn menu-toggle" data-nav-toggle aria-label="Open table of contents" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <span class="topbar-title" data-topbar-title>Beyond the Four-Persona Hypothesis</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="icon-btn" data-print aria-label="Print or save as PDF">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+    </button>
+    <button class="theme-toggle" data-theme-toggle aria-label="Toggle light and dark theme" aria-pressed="false">
+      <span class="theme-toggle-thumb"></span>
+    </button>
+  </div>
+</header>
+
+<div class="shell">
+  <!-- ============================ TABLE OF CONTENTS ============================ -->
+  <nav class="toc" aria-label="Table of contents">
+    <span class="toc-eyebrow">ON THIS PAGE</span>
+    <ul class="toc-list">
+      <li><a class="toc-link" href="#abstract" data-toc>Abstract</a></li>
+      <li><a class="toc-link" href="#dashboard" data-toc>Key Findings Dashboard</a></li>
+      <li><a class="toc-link" href="#introduction" data-toc>1. Introduction</a></li>
+      <li><a class="toc-link" href="#related-work" data-toc>2. Related Work</a></li>
+      <li><a class="toc-link" href="#methodology" data-toc>3. Methodology</a></li>
+      <li><a class="toc-link" href="#results" data-toc>4. Results</a></li>
+      <li><a class="toc-link" href="#discussion" data-toc>5. Discussion</a></li>
+      <li><a class="toc-link" href="#conclusion" data-toc>6. Conclusion</a></li>
+      <li><a class="toc-link" href="#references" data-toc>References</a></li>
+    </ul>
+    <div class="toc-footer">
+      Reading time ~18 min<br>
+      4,514 words<br>
+      Model v20260914_041335
+    </div>
+  </nav>
+
+  <main id="main-content">
+    <div class="wrap">
+
+      <!-- ============================ HERO ============================ -->
+      <section class="hero">
+        <span class="hero-eyebrow">RESEARCH ARTICLE · REAL ESTATE MARKET INTELLIGENCE</span>
+        <h1>Beyond the Four-Persona Hypothesis: Data-Driven Buyer Segmentation and Investment Profiling for Real Estate Market Intelligence</h1>
+        <p class="hero-authors">[Author Name(s) — insert before submission] · [Institutional Affiliation — insert before submission]<br>Prepared in connection with the Parcl Co. Limited buyer-segmentation project</p>
+        <div class="hero-meta">
+          <span>📄 4,514 words</span>
+          <span>🧮 k = 3 selected</span>
+          <span>📊 N = 2,000 clients</span>
+          <span>🔁 Seed 42 (reproducible)</span>
+        </div>
+        <div class="keyword-list">
+          <span class="keyword">buyer segmentation</span>
+          <span class="keyword">real estate analytics</span>
+          <span class="keyword">K-means clustering</span>
+          <span class="keyword">RFM / RFME framework</span>
+          <span class="keyword">cluster validity</span>
+          <span class="keyword">unsupervised learning</span>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-primary" data-jump="dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-6 4 3 4-7"/></svg>
+            View key findings dashboard
+          </button>
+          <button class="btn" data-print-2>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+            Print / Save as PDF
+          </button>
+        </div>
+      </section>
+
+      <!-- ============================ ABSTRACT ============================ -->
+      <section id="abstract" class="section" aria-labelledby="abstract-h">
+        <div class="abstract-card">
+          <div class="abstract-toggle-row">
+            <h2 id="abstract-h" style="margin:0;">Abstract</h2>
+            <div class="mode-switch" role="tablist" aria-label="Abstract detail level">
+              <button class="mode-btn is-active" role="tab" aria-selected="true" data-abstract-mode="full">Full abstract</button>
+              <button class="mode-btn" role="tab" aria-selected="false" data-abstract-mode="plain">Plain-language summary</button>
+            </div>
+          </div>
+          <p data-abstract-full>Real estate companies frequently adopt a priori buyer-segmentation frameworks — for example, distinguishing first-time homebuyers from institutional investors — without empirically validating these categories against transaction data. This study tests a four-segment buyer-persona framework proposed for Parcl Co. Limited (First-Time Homebuyers, Global/Institutional Diversifiers, Luxury Trophy Investors, and Corporate/Commercial Value-Add Buyers) against a dataset of 2,000 clients and 10,000 property listings, using an adapted Recency-Frequency-Monetary-Engagement (RFME) feature framework and K-means clustering. Candidate cluster counts (k = 2 to 8) were evaluated using inertia (the elbow method) and silhouette analysis, with Agglomerative Hierarchical Clustering (Ward linkage) and bootstrap resampling used to validate cluster stability. Contrary to the four-persona hypothesis, silhouette scores remained low across all values of k (maximum 0.143 at k = 3), and cluster-validity evidence supported only three statistically defensible groups: a small (2.65%) high-frequency, high-value repeat-buyer segment, and a near-even split of the remaining clients driven almost entirely by recorded customer satisfaction rather than demographic, geographic, or financing variables. Agreement between K-means and Ward clustering, measured by the Adjusted Rand Index, was moderate (0.587); bootstrap stability analysis yielded a mean Adjusted Rand Index of 0.834 across twenty resamples. These findings indicate that the transactional and demographic fields available do not support the finer-grained persona segmentation assumed in practice, and that additional behavioral and investment-related data would be required before such a framework could be operationalized responsibly. The study offers a replicable, open methodology for empirically testing rather than assuming buyer-segmentation frameworks in real estate contexts.</p>
+          <p data-abstract-plain style="display:none;">Real estate firms often guess at buyer "types" — first-time buyers, big investors, luxury buyers, companies — without checking whether their own data actually shows those groups. We checked, using real records from 2,000 clients and 10,000 property listings. The answer: the data doesn't support four distinct buyer types. It supports three groups instead — a small (2.6%) group of repeat, high-spending buyers who look genuinely different from everyone else, and then the remaining 97% of clients splitting almost evenly based on one thing: how satisfied they say they are, not their location, financing, or reason for buying. We tested this rigorously (multiple algorithms, stability checks, a sensitivity analysis) and the result held up. The practical takeaway: treat the small high-value group as a real VIP tier now, but don't build marketing around the four-persona idea until better data — on investment goals and risk appetite — is collected.</p>
+        </div>
+      </section>
+
+      <!-- ============================ DASHBOARD ============================ -->
+      <section id="dashboard" class="dashboard" aria-labelledby="dashboard-h">
+        <div class="dashboard-head">
+          <div>
+            <h2 id="dashboard-h">Key Findings Dashboard</h2>
+            <p>Interactive versions of Figures 1-3 from Section 4. All values are computed from the real Parcl Co. Limited dataset.</p>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi"><span class="kpi-label">Clients analyzed</span><span class="kpi-value">2,000</span></div>
+          <div class="kpi"><span class="kpi-label">Segments selected</span><span class="kpi-value">k = 3</span></div>
+          <div class="kpi"><span class="kpi-label">Best silhouette</span><span class="kpi-value">0.143</span></div>
+          <div class="kpi"><span class="kpi-label">K-means vs. Ward</span><span class="kpi-value">0.587<span class="unit">ARI</span></span></div>
+          <div class="kpi"><span class="kpi-label">Bootstrap stability</span><span class="kpi-value">0.834<span class="unit">ARI</span></span></div>
+        </div>
+
+        <div class="chart-panel">
+          <div class="chart-tabs" role="tablist" aria-label="Dashboard figure">
+            <button class="chart-tab is-active" role="tab" aria-selected="true" data-chart-tab="elbow">Figure 1 · Elbow &amp; Silhouette</button>
+            <button class="chart-tab" role="tab" aria-selected="false" data-chart-tab="sizes">Figure 2 · Cluster Sizes</button>
+            <button class="chart-tab" role="tab" aria-selected="false" data-chart-tab="radar">Figure 3 · Profile Comparison</button>
+          </div>
+          <div class="chart-wrap"><canvas id="dashboard-chart" role="img" aria-label="Interactive chart of the selected figure"></canvas></div>
+          <p class="chart-caption" data-chart-caption>Figure 1. Inertia (elbow method) and silhouette score across candidate values of k (2-8). The silhouette score peaks at k = 3.</p>
+          <div class="legend" data-chart-legend></div>
+        </div>
+      </section>
+
+      <!-- ============================ 1. INTRODUCTION ============================ -->
+      <section id="introduction" class="section" aria-labelledby="intro-h">
+        <h2 id="intro-h">1. Introduction</h2>
+        <p>Real estate markets are characterized by substantial heterogeneity in buyer behavior. A single portfolio of clients may include individual homebuyers purchasing a primary residence, institutional investors diversifying across geographies, high-net-worth individuals acquiring trophy assets, and corporations purchasing multiple units for commercial use. In the absence of empirical segmentation, real estate companies commonly treat this heterogeneous client base as a single undifferentiated market, which can lead to inefficient marketing spend, generic property recommendations, and missed investment-targeting opportunities.</p>
+        <p>To address this problem, Parcl Co. Limited proposed a four-segment buyer-persona framework prior to any data analysis: (1) First-Time Homebuyers, (2) Global and Institutional Diversifiers, (3) Luxury Trophy Investors, and (4) Corporate and Commercial Value-Add Buyers. This framework reflects plausible, commonly cited categories in real estate practice, but it was formulated as a business hypothesis rather than derived from the underlying client and transaction data. The central research question addressed in this study is therefore straightforward but consequential: does the data Parcl Co. Limited actually holds on its clients and properties support four statistically distinct buyer segments, and if not, what structure does it support?</p>
+        <p>Answering this question required first adapting a feature-engineering framework suited to real estate's transaction dynamics. Retail-oriented <button class="term-btn" data-term="rfm">Recency-Frequency-Monetary (RFM) analysis</button> assumes frequent, low-stakes repeat purchases and uses purchase frequency as a proxy for customer engagement. Real estate transactions are infrequent and high-stakes; a client in our dataset completes between three and thirteen transactions rather than dozens or hundreds. We therefore adapted the framework to Recency-Frequency-Monetary-Engagement (RFME), substituting an explicit engagement dimension for the behavioral signal that frequency alone captures in retail settings, while being transparent about the limitations of the available proxy for engagement (Section 3.2).</p>
+        <p>This study makes three contributions. First, it implements a complete, reproducible machine learning pipeline — data validation, feature engineering, preprocessing, clustering, and multi-method validation — applied to a real, non-synthetic dataset of 2,000 clients and 10,000 property listings supplied by Parcl Co. Limited. Second, it provides an empirical test of the four-persona hypothesis using standard cluster-validity techniques (elbow analysis, silhouette score, Adjusted Rand Index, and bootstrap stability), rather than assuming the hypothesis is correct and fitting a four-cluster solution regardless of the evidence. Third, it discusses the practical, ethical, and methodological implications of the finding that the data does not support the original hypothesis, including specific recommendations for the additional data that would be required to test the four-persona framework properly.</p>
+        <p>The remainder of this paper is organized as follows. Section 2 situates the study within existing clustering and market-segmentation literature. Section 3 describes the dataset, feature engineering, preprocessing pipeline, and clustering methodology in detail, including the criteria used for model selection. Section 4 presents the empirical results, including cluster-validity metrics and per-cluster profiles. Section 5 discusses the implications of these results for real estate practice and for the broader use of unsupervised learning in customer segmentation. Section 6 concludes with recommendations and directions for future work.</p>
+      </section>
+
+      <!-- ============================ 2. RELATED WORK ============================ -->
+      <section id="related-work" class="section" aria-labelledby="related-h">
+        <h2 id="related-h">2. Related Work</h2>
+        <p>Cluster analysis for customer segmentation has a long history in marketing analytics. Recency-Frequency-Monetary (RFM) scoring, in which customers are ranked on how recently, how often, and how much they have purchased, has been used since at least the mid-1990s as a low-dimensional summary of purchase behavior suitable for targeting decisions (Bult &amp; Wansbeek, 1995). RFM's central assumption — that frequency of purchase is a meaningful behavioral signal — holds well in retail and direct-mail contexts but is less applicable to infrequent, high-value purchases such as real estate, motivating the RFME adaptation used in this study.</p>
+        <p><button class="term-btn" data-term="kmeans">K-means clustering</button> (MacQueen, 1967) remains one of the most widely used unsupervised learning algorithms for customer segmentation due to its computational efficiency and interpretability. The <button class="term-btn" data-term="kmeanspp">k-means++ initialization</button> procedure (Arthur &amp; Vassilvitskii, 2007) improves on the algorithm's sensitivity to initial centroid placement by seeding centroids with a probability proportional to their squared distance from existing centroids, and was used throughout this study. Jain (2010) provides a comprehensive review of clustering methods and cautions that K-means, like all partitional clustering algorithms, will always produce k clusters when asked for k clusters — it does not, by itself, indicate whether k is the correct or meaningful number of groups. This caution is central to the present study's approach: rather than fixing k at four to match the business hypothesis, k was treated as an empirical question to be answered by cluster-validity evidence.</p>
+        <p>Two validity criteria were used to evaluate candidate values of k. The <button class="term-btn" data-term="silhouette">silhouette coefficient</button> (Rousseeuw, 1987) measures how similar each observation is to its own cluster relative to the nearest neighboring cluster, producing a score between -1 and 1 that is commonly interpreted as weak (below approximately 0.25), reasonable (0.25-0.5), or strong (above 0.5) structure. Agglomerative Hierarchical Clustering using <button class="term-btn" data-term="ward">Ward's linkage criterion</button> (Ward, 1963), which merges clusters to minimize the increase in within-cluster variance at each step, was used as an independent validation model; agreement between the K-means and Ward partitions was quantified using the <button class="term-btn" data-term="ari">Adjusted Rand Index</button> (Hubert &amp; Arabie, 1985), which corrects the Rand Index for the agreement expected by chance.</p>
+        <p>Market segmentation theory holds that a useful segment should be measurable, substantial (large enough to be commercially relevant), accessible (reachable through targeted action), and actionable (capable of informing a distinct strategy) (Wedel &amp; Kamakura, 2000). This study's model-selection procedure incorporates this criterion directly: a candidate solution is only accepted if it is both statistically defensible and large enough to be a plausible unit of business action (Section 3.4). The overall analytical workflow — business understanding, data understanding, data preparation, modeling, and evaluation — follows the general structure of the Cross-Industry Standard Process for Data Mining (Wirth &amp; Hipp, 2000), and the computational pipeline was implemented using the scikit-learn library (Pedregosa et al., 2011).</p>
+        <details class="note">
+          <summary>A note on scope: what this review does not include</summary>
+          <div class="note-body">
+            <p>This review does not include peer-reviewed studies that specifically validate a priori buyer-persona frameworks against real transaction data in the residential or commercial real estate sector. The authors were unable to verify sources meeting this description with sufficient confidence to cite them accurately, and elected to omit unverified citations rather than risk misattribution. A systematic review of real-estate-specific segmentation literature is identified as a direction for future work (Section 6).</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- ============================ 3. METHODOLOGY ============================ -->
+      <section id="methodology" class="section" aria-labelledby="method-h">
+        <h2 id="method-h">3. Methodology</h2>
+
+        <h3>3.1 Data</h3>
+        <p>The dataset consists of two files supplied by Parcl Co. Limited: a client file (clients.csv, 2,000 rows, 12 fields) recording client type, demographic attributes, acquisition purpose, satisfaction score, financing status, and referral channel; and a property file (properties.csv, 10,000 rows, 9 fields) recording each listing's tower, unit category, floor area, transaction date, sale price, listing status, and a reference to the purchasing client where applicable. Schema validation confirmed no missing values in either file and no duplicate client or listing identifiers. Of the 10,000 property records, 7,305 were sold transactions linked to a client and 2,695 were unsold ("Available") listings with no client reference; this pattern was verified to be complete and consistent (every null client reference corresponded exactly to an Available listing) rather than a data-quality defect. Each of the 2,000 clients had between three and thirteen sold transactions (M = 3.65).</p>
+        <p>No personally identifying fields (client name, client identifier) were used as model features. Client date of birth was used only to derive an age feature and was then discarded.</p>
+
+        <h3>3.2 Feature Engineering: The RFME Framework</h3>
+        <p>Four feature groups were constructed for each client. Recency was computed as the number of months between a fixed reference date and the client's most recent sold transaction. Frequency was the count of sold transactions per client. Monetary value comprised two features: total spend across all sold transactions, and the mean price per square foot across those transactions, <button class="term-btn" data-term="winsor">winsorized</button> at the 1st and 99th percentiles to limit the influence of extreme outliers without discarding the underlying observations.</p>
+        <div class="callout">
+          <p><strong>Documented limitation.</strong> Engagement required an explicit methodological compromise. The source data contains no clickstream, saved-search, tour-request, or other digital-behavior fields that would normally inform an engagement measure. In their absence, engagement was approximated as a weighted composite of normalized satisfaction score (60%) and normalized transaction frequency (40%), scaled to a 0-100 range. This proxy is clearly documented as a limitation throughout the study rather than presented as a measurement of genuine digital engagement; because it is partly derived from satisfaction score, a sensitivity analysis was conducted to verify that results were not an artifact of this construction (Section 3.5).</p>
+        </div>
+
+        <h3>3.3 Preprocessing Pipeline</h3>
+        <p>Numeric features (age, satisfaction score, recency, frequency, total spend, price per square foot, and engagement score) were median-imputed and standardized to zero mean and unit variance. Categorical features (client type, gender, country, region, acquisition purpose, financing status, referral channel, and dominant unit category) were imputed with the modal category and one-hot encoded, with unseen categories at inference time mapped to an all-zero encoding rather than causing an error. All preprocessing steps were fitted exclusively on the training data and persisted as a single serialized transformation pipeline, ensuring that training and inference apply identical transformations. The resulting feature matrix comprised 2,000 observations across 87 engineered dimensions (7 scaled numeric features and 80 one-hot encoded categorical dimensions, the latter dominated by the 57-level region variable).</p>
+
+        <h3>3.4 Clustering and Model Selection</h3>
+        <p>K-means clustering was fitted with k-means++ initialization, 20 independent initializations per value of k, and a fixed random seed (42) for reproducibility. Candidate values of k from 2 to 8 were evaluated using two criteria: inertia (within-cluster sum of squares, used for the elbow method) and the mean silhouette score.</p>
+        <p>The final value of k was selected using a two-part rule rather than the silhouette-maximizing k in isolation. First, the candidate with the highest silhouette score was identified. Second, a business-usefulness guard was applied: a candidate solution was only accepted if its smallest resulting cluster contained at least 2% of the client base, reflecting the threshold below which a segment is unlikely to be actionable as a distinct commercial tier. If the silhouette-maximizing candidate failed this guard, the next-best candidate by silhouette score was evaluated, and so on. This procedure is fully specified in advance of inspecting cluster contents, precluding post hoc adjustment of the threshold to match a preferred outcome.</p>
+        <p>The selected solution was validated in two independent ways. First, Agglomerative Hierarchical Clustering with Ward linkage was fitted at the same k, and agreement with the K-means partition was measured using the Adjusted Rand Index. Second, cluster stability was assessed via twenty bootstrap resamples: for each resample, 80% of clients were drawn without replacement, K-means was refit with a distinct random seed, and the resulting labels were compared to the full-sample labels (restricted to the resampled clients) using the Adjusted Rand Index. The mean of these twenty scores serves as a stability estimate, with values closer to 1 indicating a partition that is not sensitive to the particular sample drawn.</p>
+
+        <h3>3.5 Sensitivity Analysis</h3>
+        <p>Because the engagement-score feature is partly derived from satisfaction score, including both as separate model inputs risks counting satisfaction twice in the Euclidean distance calculation underlying K-means. To assess whether this redundancy drove the reported cluster structure, the full pipeline was re-run with raw satisfaction score removed from the numeric feature set (retaining only the composite engagement score). Results of this sensitivity check are reported alongside the primary findings in Section 4.4.</p>
+
+        <h3>3.6 Reproducibility</h3>
+        <p>All random processes (K-means initialization, bootstrap resampling) used a fixed seed (42). The complete pipeline — data loading, schema validation, feature engineering, preprocessing, model fitting, and evaluation — is implemented as version-controlled, tested Python code with all model artifacts (the fitted preprocessing pipeline, the fitted K-means model, and structured metadata describing every evaluation metric reported below) persisted for independent verification.</p>
+      </section>
+
+      <!-- ============================ 4. RESULTS ============================ -->
+      <section id="results" class="section" aria-labelledby="results-h">
+        <h2 id="results-h">4. Results</h2>
+
+        <h3>4.1 Selecting the Number of Clusters</h3>
+        <p>Table 1 reports inertia and silhouette score for each candidate value of k. Silhouette scores were low across the entire range tested, never exceeding 0.143, indicating weak — though not entirely absent — cluster separation in the feature space as constructed. The silhouette score peaked at k = 3 (0.143), declined sharply at k = 4 (0.112), and continued declining monotonically through k = 8. Applying the model-selection procedure described in Section 3.4, k = 3 was the highest-silhouette candidate whose smallest cluster (2.65% of clients) satisfied the 2% business-usefulness guard, and was therefore selected as the final solution. <a href="#dashboard" data-inline-jump="elbow">See Figure 1 in the dashboard above</a> for the elbow and silhouette curves used in this determination.</p>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <caption>Table 1. Inertia and silhouette score by candidate number of clusters (k)</caption>
+            <thead><tr><th>k</th><th>Inertia (WCSS)</th><th>Silhouette score</th></tr></thead>
+            <tbody>
+              <tr><td>2</td><td>17,799.13</td><td>0.136</td></tr>
+              <tr><td>3</td><td>16,340.91</td><td><strong>0.143*</strong></td></tr>
+              <tr><td>4</td><td>15,413.61</td><td>0.112</td></tr>
+              <tr><td>5</td><td>14,693.79</td><td>0.093</td></tr>
+              <tr><td>6</td><td>14,122.62</td><td>0.090</td></tr>
+              <tr><td>7</td><td>13,666.17</td><td>0.085</td></tr>
+              <tr><td>8</td><td>13,265.09</td><td>0.081</td></tr>
+            </tbody>
+          </table>
+          <p class="table-note">* Selected solution, chosen by highest silhouette score subject to the minimum cluster-share guard described in Section 3.4.</p>
+        </div>
+
+        <p>Critically, k = 4 — the value implied by the original four-persona hypothesis — was not supported by this evidence: it produced both a lower silhouette score than k = 3 and no compensating gain in cluster balance or interpretability (Section 4.3).</p>
+
+        <h3>4.2 Cluster Sizes and Validation</h3>
+        <p>The k = 3 solution produced clusters of 53 (2.65%), 946 (47.30%), and 1,001 (50.05%) clients (Table 2, <a href="#dashboard" data-inline-jump="sizes">Figure 2</a>). Agreement between the K-means partition and an independently fitted Agglomerative Ward partition at the same k was moderate (Adjusted Rand Index = 0.587), consistent with the modest silhouette scores reported above — two reasonable clustering algorithms agree on the broad structure but not on every borderline case. Bootstrap stability analysis yielded a mean Adjusted Rand Index of 0.834 across twenty resamples at 80% subsample size, indicating that the partition is reasonably, though not perfectly, reproducible; the smallest cluster (n = 53) contributed disproportionately to the residual instability, as expected for a small subgroup.</p>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <caption>Table 2. Cluster sizes and cross-algorithm validation metrics</caption>
+            <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+            <tbody>
+              <tr><td>Cluster 0 (n, %)</td><td>53 (2.65%)</td></tr>
+              <tr><td>Cluster 1 (n, %)</td><td>946 (47.30%)</td></tr>
+              <tr><td>Cluster 2 (n, %)</td><td>1,001 (50.05%)</td></tr>
+              <tr><td>Adjusted Rand Index (K-means vs. Ward)</td><td>0.587</td></tr>
+              <tr><td>Bootstrap stability (mean ARI, 20 resamples)</td><td>0.834</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>4.3 Cluster Profiles</h3>
+        <p>Table 3 reports the mean value of each numeric feature by cluster, on the original (unscaled) measurement units, alongside the population mean for reference. <a href="#dashboard" data-inline-jump="radar">Figure 3</a> presents the same information as min-max normalized values to make relative differences visually comparable across variables measured on different scales.</p>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <caption>Table 3. Cluster profile means on original (unscaled) feature units</caption>
+            <thead><tr><th>Variable</th><th>Cluster 0 (n=53)</th><th>Cluster 1 (n=946)</th><th>Cluster 2 (n=1,001)</th><th>Population mean</th></tr></thead>
+            <tbody>
+              <tr><td>Age (years)</td><td>64.9</td><td>55.3</td><td>55.4</td><td>56.0</td></tr>
+              <tr><td>Satisfaction (1-5)</td><td>3.57</td><td>1.79</td><td>4.18</td><td>2.99</td></tr>
+              <tr><td>Recency (months)</td><td>4.2</td><td>7.3</td><td>6.9</td><td>6.9</td></tr>
+              <tr><td>Frequency (txns)</td><td>7.19</td><td>3.43</td><td>3.67</td><td>3.65</td></tr>
+              <tr><td>Total spend (US$)</td><td>2,396,013</td><td>1,193,598</td><td>1,263,355</td><td>1,290,489</td></tr>
+              <tr><td>Price/sqft (US$)</td><td>301.5</td><td>302.6</td><td>302.3</td><td>302.4</td></tr>
+              <tr><td>Engagement (0-100)</td><td>55.3</td><td>13.5</td><td>50.3</td><td>32.5</td></tr>
+            </tbody>
+          </table>
+          <p class="table-note">Age in years; satisfaction on a 1-5 scale; recency in months since last transaction; frequency in count of sold transactions; total spend and price/sqft in US dollars; engagement on a 0-100 composite scale (Section 3.2).</p>
+        </div>
+
+        <p>Cluster 0 (n = 53) is distinguished by a transaction frequency roughly double that of the other two clusters (7.19 versus 3.43-3.67), total spend roughly double the population mean ($2.40 million versus a population mean of $1.29 million), the highest engagement-proxy score (55.3), the most recent transaction activity (recency of 4.2 months versus 6.9-7.3 in the other clusters), and the oldest average age (64.9 years versus approximately 55 years elsewhere). This cluster was 96% individual (non-corporate) clients and 87% United States-based.</p>
+        <p>Clusters 1 and 2 are nearly indistinguishable on every feature except satisfaction score and the satisfaction-derived engagement proxy: Cluster 1 (n = 946) averages 1.79 out of 5 on satisfaction and 13.5 on the engagement proxy, while Cluster 2 (n = 1,001) averages 4.18 and 50.3, respectively. On every other measured variable — age, recency, frequency, total spend, price per square foot, client type, gender, country, acquisition purpose, financing status, referral channel, and dominant unit category — cross-tabulation revealed no meaningful difference between Clusters 1 and 2. In other words, roughly 97% of the client base separates almost entirely along a single reported-satisfaction axis rather than along any combination of demographic, geographic, financial, or behavioral variables captured in this dataset.</p>
+
+        <h3>4.4 Sensitivity Analysis</h3>
+        <p>Removing raw satisfaction score from the numeric feature set (retaining only the composite engagement score, itself partly derived from satisfaction) reduced silhouette scores across all values of k — the maximum fell from 0.143 to 0.101, still occurring at k = 3 — but did not change the qualitative structure of the result. A small cluster of 52 clients (2.6% of the base, closely matching the 53-client Cluster 0 identified in the primary analysis) with elevated transaction frequency and total spend was again isolated, alongside a near-even split of the remainder. This consistency across two different feature specifications increases confidence that the high-frequency repeat-buyer segment reflects a genuine pattern in the underlying transaction data rather than an artifact of the satisfaction/engagement redundancy.</p>
+      </section>
+
+      <!-- ============================ 5. DISCUSSION ============================ -->
+      <section id="discussion" class="section" aria-labelledby="discussion-h">
+        <h2 id="discussion-h">5. Discussion</h2>
+        <p>The central finding of this study is a disconfirmation: the four-segment buyer-persona framework proposed for Parcl Co. Limited — distinguishing first-time homebuyers, global and institutional diversifiers, luxury trophy investors, and corporate value-add buyers — is not supported by cluster-validity evidence applied to the company's own client and transaction data. Silhouette scores were low across every candidate value of k, peaked at k = 3 rather than k = 4, and the categorical variables one would expect to differentiate these four business-defined personas — country, acquisition purpose, financing status, and client type — showed negligible variation across the clusters that were actually found.</p>
+        <p>What the data does support is a more modest but arguably more actionable two-part structure. First, a small (2.65%) but consistent high-frequency, high-spend repeat-buyer segment emerged under two different feature specifications (Section 4.4), characterized by roughly double the transaction frequency and total spend of the remaining client base, the most recent activity, and the oldest average age. This pattern is consistent with, though not confirmed by, an investment-oriented or portfolio-building buyer profile; the dataset contains no investment-horizon, risk-preference, or portfolio-size field that would allow this interpretation to be verified rather than merely inferred from purchasing behavior. We recommend that this segment be treated as an actionable relationship-management tier — it is the strongest and most stable signal identified in the available data — while explicitly avoiding the stronger claim that its members share investment motivations, risk tolerance, or wealth characteristics that the data cannot support.</p>
+        <p>Second, the remaining 97% of clients divides almost evenly along a single axis: recorded customer satisfaction. This is a materially different finding from a market segment in the conventional sense: it does not correspond to differences in purchasing power, geography, or acquisition purpose, and therefore does not, by itself, suggest a differentiated marketing or investment strategy. Instead, it suggests a service-quality or customer-experience investigation — understanding why roughly half of clients report low satisfaction despite indistinguishable purchasing behavior from their more satisfied counterparts — rather than a targeting opportunity.</p>
+        <p>These findings have direct practical implications. Building automated marketing campaigns, differentiated pricing, or investment products around the original four-persona framework would rest on segment boundaries the data does not currently support, risking both wasted resources and, in a lending or pricing context, potential fairness concerns if unsupported segment boundaries systematically correlate with protected characteristics. We found no evidence of such correlation in the clusters actually identified (gender distribution was approximately even across all three clusters, and country distribution did not show the concentration one might expect if geography were a hidden driver of cluster membership), but this should be re-verified whenever the underlying model is retrained, since a proxy effect could emerge with a different or larger dataset.</p>
+        <p>This study's methodology also carries a broader lesson for applied machine learning in business settings. It is straightforward to fit a K-means model with k fixed to match a pre-existing business hypothesis and to subsequently narrate the resulting four clusters as if they were discovered rather than assumed. The elbow, silhouette, cross-algorithm validation, and bootstrap stability procedures used here exist precisely to prevent this — they provide falsifiable evidence for or against a specific value of k, rather than a post hoc rationalization of whichever k was requested. We would argue that this disconfirming result is at least as valuable to Parcl Co. Limited as a confirming one would have been: it prevents premature operationalization of an unsupported segmentation scheme and identifies precisely which additional data (investment horizon, risk preference, financing structure detail, and portfolio size, at minimum) would be needed to test the original hypothesis properly.</p>
+
+        <h3>5.1 Limitations</h3>
+        <p>Several limitations qualify these findings. The dataset is cross-sectional, computed relative to a single fixed reference date, and cannot capture how an individual client's behavior evolves over time. The engagement measure is an explicit proxy constructed from satisfaction and frequency rather than a direct behavioral measurement, and its partial derivation from satisfaction score is a documented source of feature redundancy, mitigated but not entirely eliminated by the sensitivity analysis in Section 4.4. The high-frequency repeat-buyer segment is based on only 53 clients; its centroid estimate is correspondingly less stable than the two larger clusters, a pattern reflected in the bootstrap stability results. Finally, all clients in this dataset are drawn from a single company's existing client base, which may not generalize to prospective clients, other companies, or other real estate markets.</p>
+      </section>
+
+      <!-- ============================ 6. CONCLUSION ============================ -->
+      <section id="conclusion" class="section" aria-labelledby="conclusion-h">
+        <h2 id="conclusion-h">6. Conclusion</h2>
+        <p>This study set out to test, rather than assume, a four-segment buyer-persona framework proposed for Parcl Co. Limited's real estate client base. Using an RFME feature framework, K-means clustering with rigorous, pre-specified model-selection criteria, and multiple independent validation procedures (Ward-linkage agreement, bootstrap stability, and a feature-redundancy sensitivity check), we find that the available data supports three groups rather than four: a small but consistent high-frequency, high-value repeat-buyer segment, and a near-even split of the remaining clients driven almost entirely by recorded satisfaction rather than by any demographic, geographic, or financial variable available in the dataset.</p>
+        <p>We recommend that Parcl Co. Limited treat the high-frequency repeat-buyer segment as an actionable relationship-management tier immediately, given the consistency of this signal across independent checks, while deferring the operationalization of the broader four-persona framework until additional fields — investment horizon, risk preference, detailed financing structure, and portfolio size for corporate and institutional buyers — can be collected and the analysis repeated. The satisfaction-driven split among the remaining clients merits a customer-experience investigation rather than a segmentation-based marketing response.</p>
+        <p>Future work should pursue three directions. First, a longitudinal extension of this analysis, tracking clients across multiple reference periods, would clarify whether cluster membership is stable over time or reflects a transient snapshot. Second, incorporating genuine behavioral data — website interaction logs, saved-search activity, and inquiry-to-purchase funnels — would allow the engagement dimension of the RFME framework to be measured directly rather than approximated. Third, once richer investment-related fields are available, a supervised or semi-supervised follow-up study could test the original four-persona hypothesis directly, using the unsupervised findings reported here as a baseline against which any newly proposed segmentation should be compared. More broadly, we encourage practitioners applying unsupervised learning to customer segmentation to treat the number and composition of segments as an empirical question subject to falsification, rather than a business assumption to be confirmed by construction.</p>
+      </section>
+
+      <!-- ============================ REFERENCES ============================ -->
+      <section id="references" class="section" aria-labelledby="ref-h">
+        <h2 id="ref-h">References</h2>
+        <div class="ref-list">
+          <!-- Reference items populated below -->
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p style="max-width:none;">Interactive HTML edition of the research paper prepared for the Parcl Co. Limited buyer-segmentation project. Also available as a formatted Word document. Author name, affiliation, and external links (GitHub, deployed application, published paper, and video) remain explicit placeholders per this project's no-fabrication policy.</p>
+      </footer>
+    </div>
+  </main>
+</div>
+
+<button id="back-to-top" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+</button>
+
+<script>
+/* =====================================================================
+   DATA — every figure/value below is taken directly from the paper's
+   Results section (Section 4), computed from the real Parcl Co. Limited
+   dataset (2,000 clients, 10,000 property listings).
+   ===================================================================== */
+const PAPER_DATA = {
+  kEval: [
+    { k: 2, inertia: 17799.13, silhouette: 0.136 },
+    { k: 3, inertia: 16340.91, silhouette: 0.143 },
+    { k: 4, inertia: 15413.61, silhouette: 0.112 },
+    { k: 5, inertia: 14693.79, silhouette: 0.093 },
+    { k: 6, inertia: 14122.62, silhouette: 0.090 },
+    { k: 7, inertia: 13666.17, silhouette: 0.085 },
+    { k: 8, inertia: 13265.09, silhouette: 0.081 },
+  ],
+  clusters: [
+    { name: "Cluster 0: High-Frequency Repeat Buyers", n: 53, share: 0.0265, color: "#B08D57",
+      means: { age: 64.9, satisfaction_score: 3.57, recency_months: 4.2, frequency_transactions: 7.19, monetary_total_spend: 2396013, monetary_avg_price_per_sqft: 301.5, engagement_score: 55.3 } },
+    { name: "Cluster 1: Lower Recorded Satisfaction", n: 946, share: 0.4730, color: "#C1666B",
+      means: { age: 55.3, satisfaction_score: 1.79, recency_months: 7.3, frequency_transactions: 3.43, monetary_total_spend: 1193598, monetary_avg_price_per_sqft: 302.6, engagement_score: 13.5 } },
+    { name: "Cluster 2: Higher Recorded Satisfaction", n: 1001, share: 0.5005, color: "#2FB8A6",
+      means: { age: 55.4, satisfaction_score: 4.18, recency_months: 6.9, frequency_transactions: 3.67, monetary_total_spend: 1263355, monetary_avg_price_per_sqft: 302.3, engagement_score: 50.3 } },
+  ],
+  featureRanges: {
+    age: { min: 25.0, max: 94.9 }, satisfaction_score: { min: 1, max: 5 },
+    recency_months: { min: 1, max: 23 }, frequency_transactions: { min: 3, max: 13 },
+    monetary_total_spend: { min: 463612, max: 3653385 }, monetary_avg_price_per_sqft: { min: 248, max: 362 },
+    engagement_score: { min: 0, max: 100 },
+  },
+};
+
+const RADAR_METRICS = [
+  { key: "age", label: "Age" }, { key: "satisfaction_score", label: "Satisfaction" },
+  { key: "recency_months", label: "Recency", invert: true }, { key: "frequency_transactions", label: "Frequency" },
+  { key: "monetary_total_spend", label: "Total spend" }, { key: "monetary_avg_price_per_sqft", label: "Price/sqft" },
+  { key: "engagement_score", label: "Engagement" },
+];
+
+const TERMS = {
+  rfm: { title: "RFM Analysis", body: "A customer-scoring method ranking buyers by Recency, Frequency, and Monetary value of past purchases. Common in retail and direct-mail marketing." },
+  kmeans: { title: "K-means Clustering", body: "An unsupervised algorithm that partitions data into k groups by minimizing the distance between each point and its assigned cluster's center (centroid)." },
+  kmeanspp: { title: "k-means++ Initialization", body: "A smarter way to pick K-means' starting centroids — spreading them out probabilistically — which reduces the chance of a poor, unlucky clustering result." },
+  silhouette: { title: "Silhouette Score", body: "Measures how well-separated clusters are, from -1 (poor) to 1 (excellent). Below ~0.25 generally indicates weak structure." },
+  ward: { title: "Ward's Linkage", body: "A hierarchical clustering rule that merges the two clusters whose combination increases total within-cluster variance the least." },
+  ari: { title: "Adjusted Rand Index (ARI)", body: "Measures agreement between two different cluster assignments of the same data, corrected for chance agreement. 0 = chance, 1 = identical." },
+  winsor: { title: "Winsorization", body: "Capping extreme values at a percentile threshold (e.g., 1st/99th) to reduce the influence of outliers without deleting any data points." },
+};
+
+const references = [
+  "Arthur, D., & Vassilvitskii, S. (2007). k-means++: The advantages of careful seeding. In Proceedings of the Eighteenth Annual ACM-SIAM Symposium on Discrete Algorithms (pp. 1027-1035). Society for Industrial and Applied Mathematics.",
+  "Bult, J. R., & Wansbeek, T. (1995). Optimal selection for direct mail. Marketing Science, 14(4), 378-394. https://doi.org/10.1287/mksc.14.4.378",
+  "Hubert, L., & Arabie, P. (1985). Comparing partitions. Journal of Classification, 2(1), 193-218. https://doi.org/10.1007/BF01908075",
+  "Jain, A. K. (2010). Data clustering: 50 years beyond K-means. Pattern Recognition Letters, 31(8), 651-666. https://doi.org/10.1016/j.patrec.2009.09.011",
+  "MacQueen, J. (1967). Some methods for classification and analysis of multivariate observations. In Proceedings of the Fifth Berkeley Symposium on Mathematical Statistics and Probability (Vol. 1, pp. 281-297). University of California Press.",
+  "Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., Blondel, M., Prettenhofer, P., Weiss, R., Dubourg, V., Vanderplas, J., Passos, A., Cournapeau, D., Brucher, M., Perrot, M., & Duchesnay, E. (2011). Scikit-learn: Machine learning in Python. Journal of Machine Learning Research, 12, 2825-2830.",
+  "Rousseeuw, P. J. (1987). Silhouettes: A graphical aid to the interpretation and validation of cluster analysis. Journal of Computational and Applied Mathematics, 20, 53-65. https://doi.org/10.1016/0377-0427(87)90125-7",
+  "Ward, J. H. (1963). Hierarchical grouping to optimize an objective function. Journal of the American Statistical Association, 58(301), 236-244. https://doi.org/10.1080/01621459.1963.10500845",
+  "Wedel, M., & Kamakura, W. A. (2000). Market segmentation: Conceptual and methodological foundations (2nd ed.). Springer.",
+  "Wirth, R., & Hipp, J. (2000). CRISP-DM: Towards a standard process model for data mining. In Proceedings of the Fourth International Conference on the Practical Applications of Knowledge Discovery and Data Mining (pp. 29-39). Springer.",
+];
+
+/* =====================================================================
+   UTILITIES
+   ===================================================================== */
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+function normalize(v, range) { return range.max === range.min ? 0.5 : clamp((v - range.min) / (range.max - range.min), 0, 1); }
+function fmtCurrency(v) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: v >= 1000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(v); }
+
+/* =====================================================================
+   REFERENCES with copy buttons
+   ===================================================================== */
+function renderReferences() {
+  const list = document.querySelector(".ref-list");
+  list.innerHTML = references.map((text, i) => `
+    <div class="ref-item">
+      <button class="copy-btn" data-copy-ref="${i}" aria-label="Copy citation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+      <p class="ref-text">${text}</p>
+    </div>`).join("");
+
+  list.querySelectorAll("[data-copy-ref]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const idx = Number(btn.dataset.copyRef);
+      try {
+        await navigator.clipboard.writeText(references[idx]);
+        btn.classList.add("is-copied");
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
+        setTimeout(() => {
+          btn.classList.remove("is-copied");
+          btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+        }, 1600);
+      } catch (e) { /* clipboard unavailable - fail silently */ }
+    });
+  });
+}
+
+/* =====================================================================
+   DASHBOARD CHART (tabbed: elbow / sizes / radar)
+   ===================================================================== */
+let dashboardChart = null;
+
+function chartTheme() {
+  return { text: cssVar("--c-text-muted"), grid: cssVar("--c-border"), brand: cssVar("--c-brand"), accent: cssVar("--c-accent"), panel: cssVar("--c-panel"),
+    cluster: [cssVar("--c-cluster-0"), cssVar("--c-cluster-1"), cssVar("--c-cluster-2")] };
+}
+
+function buildElbowConfig() {
+  const theme = chartTheme();
+  const chosenIndex = PAPER_DATA.kEval.findIndex((e) => e.k === 3);
+  return {
+    type: "line",
+    data: {
+      labels: PAPER_DATA.kEval.map((e) => "k=" + e.k),
+      datasets: [
+        { label: "Silhouette score", data: PAPER_DATA.kEval.map((e) => e.silhouette), borderColor: theme.accent, backgroundColor: theme.accent,
+          pointRadius: PAPER_DATA.kEval.map((_, i) => (i === chosenIndex ? 6 : 3)),
+          pointBackgroundColor: PAPER_DATA.kEval.map((_, i) => (i === chosenIndex ? theme.brand : theme.accent)), tension: 0.3, yAxisID: "y" },
+        { label: "Inertia", data: PAPER_DATA.kEval.map((e) => e.inertia), borderColor: theme.grid, backgroundColor: theme.grid, borderDash: [4, 4], pointRadius: 2, tension: 0.3, yAxisID: "y1" },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: true, position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: (item) => item.dataset.label === "Inertia" ? `Inertia: ${Math.round(item.raw).toLocaleString()}` : `Silhouette: ${item.raw.toFixed(3)}${item.dataIndex === chosenIndex ? "  (selected k)" : ""}` } } },
+      scales: { y: { position: "left", title: { display: true, text: "Silhouette score" }, grid: { color: theme.grid } },
+        y1: { position: "right", title: { display: true, text: "Inertia" }, grid: { display: false } }, x: { grid: { display: false } } },
+    },
+  };
+}
+
+function buildSizesConfig() {
+  const theme = chartTheme();
+  return {
+    type: "doughnut",
+    data: { labels: PAPER_DATA.clusters.map((c) => c.name), datasets: [{ data: PAPER_DATA.clusters.map((c) => c.n), backgroundColor: theme.cluster, borderColor: theme.panel, borderWidth: 3, hoverOffset: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "60%",
+      plugins: { tooltip: { callbacks: { label: (item) => { const c = PAPER_DATA.clusters[item.dataIndex]; return ` ${c.name}: ${c.n.toLocaleString()} clients (${(c.share * 100).toFixed(1)}%)`; } } } } },
+  };
+}
+
+function buildRadarConfig() {
+  const theme = chartTheme();
+  return {
+    type: "radar",
+    data: { labels: RADAR_METRICS.map((m) => m.label),
+      datasets: PAPER_DATA.clusters.map((c, i) => ({ label: c.name,
+        data: RADAR_METRICS.map(({ key, invert }) => { const r = PAPER_DATA.featureRanges[key]; let n = normalize(c.means[key], r); if (invert) n = 1 - n; return Math.round(n * 100); }),
+        borderColor: theme.cluster[i], backgroundColor: theme.cluster[i] + "22", pointBackgroundColor: theme.cluster[i], borderWidth: 2, pointRadius: 3 })) },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } },
+        tooltip: { callbacks: { label: (item) => { const c = PAPER_DATA.clusters[item.datasetIndex]; const m = RADAR_METRICS[item.dataIndex]; const raw = c.means[m.key];
+          const disp = m.key.includes("spend") ? fmtCurrency(raw) : m.key.includes("price") ? "$" + raw.toFixed(0) : raw.toFixed(1); return ` ${c.name} - ${m.label}: ${disp}`; } } } },
+      scales: { r: { min: 0, max: 100, ticks: { display: false }, grid: { color: theme.grid }, angleLines: { color: theme.grid }, pointLabels: { font: { size: 10 } } } },
+    },
+  };
+}
+
+const CHART_BUILDERS = { elbow: buildElbowConfig, sizes: buildSizesConfig, radar: buildRadarConfig };
+const CHART_CAPTIONS = {
+  elbow: "Figure 1. Inertia (elbow method) and silhouette score across candidate values of k (2-8). The silhouette score peaks at k = 3.",
+  sizes: "Figure 2. Cluster sizes at the selected solution (k = 3, N = 2,000).",
+  radar: "Figure 3. Normalized cluster profile comparison across seven RFME-derived features.",
+};
+
+function renderDashboardChart(which) {
+  const ctx = document.getElementById("dashboard-chart");
+  if (dashboardChart) dashboardChart.destroy();
+  dashboardChart = new Chart(ctx, CHART_BUILDERS[which]());
+  document.querySelector("[data-chart-caption]").textContent = CHART_CAPTIONS[which];
+
+  const legendEl = document.querySelector("[data-chart-legend]");
+  if (which === "sizes") {
+    const theme = chartTheme();
+    legendEl.innerHTML = PAPER_DATA.clusters.map((c, i) =>
+      `<span class="legend-item"><span class="legend-swatch" style="background:${theme.cluster[i]}"></span>${c.name} (${(c.share * 100).toFixed(1)}%)</span>`).join("");
+  } else {
+    legendEl.innerHTML = "";
+  }
+}
+
+function setupDashboardTabs() {
+  const tabs = document.querySelectorAll("[data-chart-tab]");
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => { t.classList.remove("is-active"); t.setAttribute("aria-selected", "false"); });
+      tab.classList.add("is-active"); tab.setAttribute("aria-selected", "true");
+      renderDashboardChart(tab.dataset.chartTab);
+    });
+  });
+}
+
+function jumpToDashboardTab(which) {
+  document.getElementById("dashboard").scrollIntoView({ behavior: "smooth", block: "start" });
+  const tab = document.querySelector(`[data-chart-tab="${which}"]`);
+  if (tab) tab.click();
+}
+
+/* =====================================================================
+   TOOLTIP (glossary terms)
+   ===================================================================== */
+function setupTooltips() {
+  const tooltip = document.getElementById("tooltip");
+  let activeBtn = null;
+
+  function hide() {
+    tooltip.classList.remove("is-visible");
+    if (activeBtn) activeBtn.setAttribute("aria-expanded", "false");
+    activeBtn = null;
+  }
+
+  document.querySelectorAll(".term-btn").forEach((btn) => {
+    btn.setAttribute("aria-expanded", "false");
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const term = TERMS[btn.dataset.term];
+      if (!term) return;
+      if (activeBtn === btn) { hide(); return; }
+      activeBtn = btn;
+      btn.setAttribute("aria-expanded", "true");
+      tooltip.innerHTML = `<strong>${term.title}</strong>${term.body}`;
+      const rect = btn.getBoundingClientRect();
+      tooltip.style.left = clamp(rect.left, 12, window.innerWidth - 292) + "px";
+      const top = rect.bottom + 8;
+      tooltip.style.top = (top + 160 > window.innerHeight ? rect.top - 8 : top) + "px";
+      if (top + 160 > window.innerHeight) tooltip.style.transform = "translateY(-100%)"; else tooltip.style.transform = "";
+      tooltip.classList.add("is-visible");
+    });
+  });
+
+  document.addEventListener("click", hide);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hide(); });
+  window.addEventListener("scroll", hide, { passive: true });
+}
+
+/* =====================================================================
+   PROGRESS BAR + BACK TO TOP
+   ===================================================================== */
+function setupScrollEffects() {
+  const bar = document.getElementById("progress-bar");
+  const backBtn = document.getElementById("back-to-top");
+  function onScroll() {
+    const h = document.documentElement;
+    const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    bar.style.width = scrolled + "%";
+    backBtn.classList.toggle("is-visible", h.scrollTop > 600);
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+  backBtn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+}
+
+/* =====================================================================
+   TOC SCROLL-SPY + MOBILE NAV
+   ===================================================================== */
+function setupTocAndNav() {
+  const sections = document.querySelectorAll("main .section, main #dashboard");
+  const links = document.querySelectorAll("[data-toc]");
+  const topbarTitle = document.querySelector("[data-topbar-title]");
+  const byId = new Map();
+  links.forEach((l) => byId.set(l.getAttribute("href").slice(1), l));
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      links.forEach((l) => l.classList.remove("is-active"));
+      const link = byId.get(entry.target.id);
+      if (link) { link.classList.add("is-active"); topbarTitle.textContent = link.textContent.trim(); }
+    });
+  }, { rootMargin: "-35% 0px -55% 0px" });
+  sections.forEach((s) => observer.observe(s));
+
+  const toggle = document.querySelector("[data-nav-toggle]");
+  const scrim = document.querySelector("[data-scrim]");
+  function close() { document.body.classList.remove("nav-open"); toggle.setAttribute("aria-expanded", "false"); }
+  function open() { document.body.classList.add("nav-open"); toggle.setAttribute("aria-expanded", "true"); }
+  toggle.addEventListener("click", () => document.body.classList.contains("nav-open") ? close() : open());
+  scrim.addEventListener("click", close);
+  links.forEach((l) => l.addEventListener("click", close));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+}
+
+/* =====================================================================
+   THEME TOGGLE
+   ===================================================================== */
+function setupTheme() {
+  const toggle = document.querySelector("[data-theme-toggle]");
+  const root = document.documentElement;
+  function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function safeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  const stored = safeGet("paper-theme");
+  const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+  applyTheme(stored || (prefersLight ? "light" : "dark"));
+
+  toggle.addEventListener("click", () => {
+    const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+    applyTheme(next); safeSet("paper-theme", next);
+  });
+
+  function applyTheme(theme) {
+    if (theme === "light") root.setAttribute("data-theme", "light"); else root.removeAttribute("data-theme");
+    toggle.setAttribute("aria-pressed", String(theme === "light"));
+    if (dashboardChart) renderDashboardChart(document.querySelector(".chart-tab.is-active").dataset.chartTab);
+  }
+}
+
+/* =====================================================================
+   ABSTRACT MODE SWITCH
+   ===================================================================== */
+function setupAbstractSwitch() {
+  const btns = document.querySelectorAll("[data-abstract-mode]");
+  const full = document.querySelector("[data-abstract-full]");
+  const plain = document.querySelector("[data-abstract-plain]");
+  btns.forEach((btn) => btn.addEventListener("click", () => {
+    btns.forEach((b) => { b.classList.remove("is-active"); b.setAttribute("aria-selected", "false"); });
+    btn.classList.add("is-active"); btn.setAttribute("aria-selected", "true");
+    const showFull = btn.dataset.abstractMode === "full";
+    full.style.display = showFull ? "" : "none";
+    plain.style.display = showFull ? "none" : "";
+  }));
+}
+
+/* =====================================================================
+   MISC: print buttons, hero jump button, inline figure jumps
+   ===================================================================== */
+function setupMisc() {
+  document.querySelectorAll("[data-print], [data-print-2]").forEach((btn) => btn.addEventListener("click", () => window.print()));
+  document.querySelectorAll("[data-jump]").forEach((btn) => btn.addEventListener("click", () => document.getElementById(btn.dataset.jump).scrollIntoView({ behavior: "smooth" })));
+  document.querySelectorAll("[data-inline-jump]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); jumpToDashboardTab(a.dataset.inlineJump); }));
+}
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+document.addEventListener("DOMContentLoaded", () => {
+  renderReferences();
+  setupDashboardTabs();
+  renderDashboardChart("elbow");
+  setupTooltips();
+  setupScrollEffects();
+  setupTocAndNav();
+  setupTheme();
+  setupAbstractSwitch();
+  setupMisc();
+
+  requestAnimationFrame(() => {
+    document.body.classList.add("js-load");
+    setTimeout(() => document.body.classList.remove("js-load"), 1200);
+  });
+});
+
+window.addEventListener("resize", () => { if (dashboardChart) dashboardChart.resize(); });
+</script>
+</body>
+</html>
